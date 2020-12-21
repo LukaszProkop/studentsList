@@ -1,53 +1,62 @@
 package com.epam.homework;
 
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.IntStream;
-
-import static com.epam.homework.Randomizer.randomName;
-import static com.epam.homework.Randomizer.randomPoints;
+import java.util.Scanner;
 
     /*
     TODO:
-        1. grades PreAcademyStudents using
-	    2. total ordering per all points they have (via Comparable, total as in sum of all points)
-	    3. orderings per quizzes, tasks and lecture activity (via Comparators)
-	    4. optional: use record for PreAcademyStudent
+        1. Generate input csv
+        2. Load input csv file
+        3. grades PreAcademyStudents using
+	    4. total ordering per all points they have (via Comparable, total as in sum of all points)
+	    5. orderings per quizzes, tasks and lecture activity (via Comparators)
+	    6. optional: use record for PreAcademyStudent
+	    7 Save sorted list in .csv file
     */
 
 public class Main {
+
+    private final File csvLoader = new File("studentListInput.csv");
+    private final StringBuilder studentList = new StringBuilder();
+    private final List<PreAcademyStudent> list = new LinkedList<>();
+
     public static void main(String[] args) {
-        List<PreAcademyStudent> list = randomStudentsList(10);
+        Main main = new Main();
+        new Generator().randomStudentsCsvGenerator(10);
+        main.studentList();
+        new Generator().csvGenerator(main.list, "studentList.csv");
+    }
 
-        List<String> generateCSV = new LinkedList<>();
-        generateCSV.add("Name,Quizzes,Tasks,Activity,Total");
-        list.forEach(i-> generateCSV.add(i.name() + "," + i.quizzes() + "," + i.tasks() + "," + i.activity() + "," + i.totalNumberOfPoints()));
+    private void studentList() {
+        loadCsv();
+        String[] studentsArr = studentList.toString().split("\n");
+        String[] arrForList = Arrays.copyOfRange(studentsArr, 1, studentsArr.length);
+        Arrays.stream(arrForList).map(i -> i.split(","))
+                .forEach(i -> list.add(new PreAcademyStudent(i[0], new Quizzes(Integer.parseInt(i[1])),
+                        new Tasks(Integer.parseInt(i[2])), new Activity(Integer.parseInt(i[3])))));
+        sortList();
+        list.forEach(System.out::println);
+    }
 
-        try(PrintWriter pw = new PrintWriter("homework.csv")) {
-            generateCSV.forEach(pw::println);
-        } catch (IOException e) {
+    private void loadCsv() {
+        try {
+            Scanner csvData = new Scanner(csvLoader);
+            while (csvData.hasNextLine()) {
+                studentList.append(csvData.nextLine()).append('\n');
+            }
+        } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+    }
 
+    private void sortList() {
         list.sort(new SortByActivity());
         list.sort(new SortByTasks());
         list.sort(new SortByQuizzes());
         list.sort(PreAcademyStudent::compareTo);
-
-        List<PreAcademyStudent> orderedList = list;
-
-        orderedList.forEach(System.out::println);
-    }
-
-    public static List<PreAcademyStudent> randomStudentsList(int numberOfStudents) {
-        List<PreAcademyStudent> students = new LinkedList<>();
-        if (numberOfStudents > 0)
-            IntStream.rangeClosed(1, numberOfStudents)
-                    .forEach(i -> students.add(new PreAcademyStudent(randomName() + " " + randomName(),
-                            new Quizzes(randomPoints()), new Tasks(randomPoints()),
-                            new Activity(randomPoints()))));
-        return students;
     }
 }
